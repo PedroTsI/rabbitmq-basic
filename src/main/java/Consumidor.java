@@ -8,22 +8,38 @@ public class Consumidor {
     public static void main(String[] args) throws Exception {
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.setHost("localhost");
+        connectionFactory.setPort(5672);
         Connection conexao = connectionFactory.newConnection();
         Channel canal = conexao.createChannel();
 
-        String NOME_FILA = "plica"
-                + "";
-        canal.queueDeclare(NOME_FILA, false, false, false, null);
+        canal.basicQos(1);
+
+        String NOME_FILA = "teste"+ "";
+        canal.queueDeclare(NOME_FILA, true, false, false, null);
 
         DeliverCallback callback = (consumerTag, delivery) -> {
-            String mensagem = new String(delivery.getBody());
-            System.out.println("Eu " + consumerTag + " Recebi: " + mensagem);
+            String mensagem = new String(delivery.getBody()); 
+            System.out.println("Eu" + consumerTag + " recebi: " + mensagem);  
+            try {
+                doWork(mensagem);   
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } finally {
+                System.out.println(" [x] Done");
+            }
+            
         };
+        boolean autoAck = true;
 
         // fila, noAck, callback, callback em caso de cancelamento (por exemplo, a fila foi deletada)
-        canal.basicConsume(NOME_FILA, true, callback, consumerTag -> {
+        canal.basicConsume(NOME_FILA, autoAck, callback, consumerTag -> {
             System.out.println("Cancelaram a fila: " + NOME_FILA);
         });
+    }
+    private static void doWork(String task) throws InterruptedException {
+        for (char ch: task.toCharArray()) {
+            if (ch == '.') Thread.sleep(1000);
+        }
     }
 }
 
